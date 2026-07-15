@@ -108,9 +108,11 @@ def load_songs(csv_path: str) -> List[Dict]:
         songs = []
         for row in reader:
             row = dict(row)
-            for key in ["energy", "tempo_bpm", "valence", "danceability", "acousticness"]:
+            for key in ["energy", "tempo_bpm", "valence", "danceability", "acousticness", "popularity", "instrumentalness", "speechiness", "liveness"]:
                 row[key] = float(row[key])
             row["id"] = int(row["id"])
+            row["release_decade"] = int(row["release_decade"])
+            row["detailed_mood_tags"] = row.get("detailed_mood_tags", "")
             songs.append(row)
     print(f"Loaded songs: {len(songs)}")
     return songs
@@ -129,8 +131,8 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     reasons: List[str] = []
 
     if song.get("genre") == preferred_genre:
-        score += 2.0
-        reasons.append("genre match (+2.0)")
+        score += 1.0
+        reasons.append("genre match (+1.0)")
     else:
         reasons.append("genre mismatch")
 
@@ -142,7 +144,7 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
 
     song_energy = float(song.get("energy", 0.0))
     energy_gap = abs(song_energy - target_energy)
-    energy_score = max(0.0, 1.0 - energy_gap)
+    energy_score = max(0.0, 1.5 - (energy_gap * 1.5))
     score += energy_score
     reasons.append(f"energy similarity (+{energy_score:.2f})")
 
@@ -154,6 +156,34 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     elif not likes_acoustic and acousticness > 0.7:
         score -= 0.2
         reasons.append("acoustic penalty (-0.20)")
+
+    target_popularity = user_prefs.get("target_popularity")
+    if target_popularity is not None:
+        popularity_gap = abs(float(song.get("popularity", 0.0)) - float(target_popularity))
+        popularity_score = max(0.0, 1.0 - (popularity_gap / 100.0))
+        score += popularity_score
+        reasons.append(f"popularity (+{popularity_score:.2f})")
+
+    preferred_decade = user_prefs.get("preferred_decade")
+    if preferred_decade is not None:
+        decade_gap = abs(int(song.get("release_decade", 0)) - int(preferred_decade))
+        decade_score = max(0.0, 1.0 - (decade_gap / 10.0))
+        score += decade_score
+        reasons.append(f"release decade (+{decade_score:.2f})")
+
+    favorite_mood_tag = user_prefs.get("favorite_mood_tag")
+    if favorite_mood_tag:
+        tags = str(song.get("detailed_mood_tags", "")).lower().split(",")
+        if favorite_mood_tag.lower() in tags:
+            score += 0.5
+            reasons.append("mood tag match (+0.5)")
+
+    target_instrumentalness = user_prefs.get("target_instrumentalness")
+    if target_instrumentalness is not None:
+        instrumentalness_gap = abs(float(song.get("instrumentalness", 0.0)) - float(target_instrumentalness))
+        instrumentalness_score = max(0.0, 1.0 - instrumentalness_gap)
+        score += instrumentalness_score
+        reasons.append(f"instrumentalness (+{instrumentalness_score:.2f})")
 
     return score, reasons
 

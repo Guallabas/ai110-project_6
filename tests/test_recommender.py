@@ -79,3 +79,33 @@ def test_score_song_returns_score_and_reasons():
     assert score > 0
     assert any("genre match" in reason for reason in reasons)
     assert any("mood match" in reason for reason in reasons)
+
+
+def test_score_song_uses_advanced_features():
+    user_prefs = {
+        "genre": "pop",
+        "mood": "happy",
+        "energy": 0.8,
+        "target_popularity": 85,
+        "preferred_decade": 2020,
+        "favorite_mood_tag": "euphoric",
+        "target_instrumentalness": 0.1,
+    }
+    song = {
+        "genre": "pop",
+        "mood": "happy",
+        "energy": 0.82,
+        "popularity": 86,
+        "release_decade": 2020,
+        "detailed_mood_tags": "euphoric,bright",
+        "instrumentalness": 0.1,
+        "speechiness": 0.06,
+        "liveness": 0.18,
+    }
+
+    score, reasons = score_song(user_prefs, song)
+
+    assert score > 3.0
+    assert any("popularity" in reason for reason in reasons)
+    assert any("release decade" in reason for reason in reasons)
+    assert any("mood tag" in reason for reason in reasons)
