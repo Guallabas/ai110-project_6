@@ -1,4 +1,4 @@
-from src.recommender import Song, UserProfile, Recommender
+from src.recommender import Song, UserProfile, Recommender, load_songs, score_song
 
 def make_small_recommender() -> Recommender:
     songs = [
@@ -59,3 +59,23 @@ def test_explain_recommendation_returns_non_empty_string():
     explanation = rec.explain_recommendation(user, song)
     assert isinstance(explanation, str)
     assert explanation.strip() != ""
+
+
+def test_load_songs_reads_csv_and_converts_numbers():
+    songs = load_songs("data/songs.csv")
+
+    assert len(songs) == 16
+    assert songs[0]["title"] == "Sunrise City"
+    assert songs[0]["energy"] == 0.82
+    assert isinstance(songs[0]["tempo_bpm"], float)
+
+
+def test_score_song_returns_score_and_reasons():
+    user_prefs = {"genre": "pop", "mood": "happy", "energy": 0.8}
+    song = {"genre": "pop", "mood": "happy", "energy": 0.82}
+
+    score, reasons = score_song(user_prefs, song)
+
+    assert score > 0
+    assert any("genre match" in reason for reason in reasons)
+    assert any("mood match" in reason for reason in reasons)
